@@ -222,11 +222,11 @@ void parse(char* filename)
     
 }
 
-bool intersect(glm::vec3 rayOrigin, glm::vec3 rayDirection, vector<Sphere> spheres) {
+bool intersect(glm::vec3 rayOrigin, glm::vec3 rayDirection, vector<Sphere>& spheres) {
     return false;
 }
 
-void shootRays(unsigned char* pixels, int resX, int resY, const glm::vec3 &bgColor, const glm::vec3 &ambientIntensity, vector<Light> lights, vector<Sphere> spheres) {
+void shootRays(unsigned char* pixels, int resX, int resY, const glm::vec3 &bgColor, const glm::vec3 &ambientIntensity, vector<Light>& lights, vector<Sphere>& spheres) {
     //camera parameters
     float NEAR = inputs.near;
     float LEFT = inputs.left;
