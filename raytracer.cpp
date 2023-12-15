@@ -23,7 +23,7 @@ struct Sphere
     glm::mat4 transMatrix;
     glm::mat4 invMatrix;
     string name;
-    glm::vec4 position;
+    glm::vec3 position;
     glm::vec3 scale;
     glm::vec3 color;
     float kA; 
@@ -226,6 +226,20 @@ bool intersect(glm::vec3 rayOrigin, glm::vec3 rayDirection, vector<Sphere>& sphe
     return false;
 }
 
+void calculateTransformationMatrices(vector<Sphere>& spheres) {
+    for (Sphere& sphere : spheres) {
+        // Create the transformation matrix
+        glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), sphere.position);
+        glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), sphere.scale);
+        
+        // Assuming no rotation; if rotation is added, include it here
+        sphere.transMatrix = translationMatrix * scaleMatrix;
+
+        // Calculate the inverse of the transformation matrix
+        sphere.invMatrix = glm::inverse(sphere.transMatrix);
+    }
+}
+
 void shootRays(unsigned char* pixels, int resX, int resY, const glm::vec3 &bgColor, const glm::vec3 &ambientIntensity, vector<Light>& lights, vector<Sphere>& spheres) {
     //camera parameters
     float NEAR = inputs.near;
@@ -274,7 +288,7 @@ int main(int argc, char* argv[])
     parse(filename);
 
     unsigned char* pixels = new unsigned char[inputs.resX * inputs.resY * 3];
-
+    calculateTransformationMatrices(inputs.spheres);
     shootRays(pixels, inputs.resX, inputs.resY, inputs.bkg, inputs.ambience, inputs.lights, inputs.spheres);
     char filename[] = "test_output.ppm";
     save_imageP3(inputs.resX, inputs.resY, filename, pixels);
