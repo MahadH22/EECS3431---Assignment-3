@@ -8,6 +8,7 @@
 #include <iterator>
 #include "glm-master/glm/glm.hpp"
 #include "glm-master/glm/ext.hpp"
+#include "ppm.cpp"
 #include <vector>
 #define max 50
  
@@ -23,8 +24,8 @@ struct Sphere
     glm::mat4 invMatrix;
     string name;
     glm::vec4 position;
-    glm::vec3 color;
     glm::vec3 scale;
+    glm::vec3 color;
     float kA; 
     float kD; 
     float kS;
@@ -221,6 +222,41 @@ void parse(char* filename)
     
 }
 
+bool intersect(glm::vec3 rayOrigin, glm::vec3 rayDirection, vector<Sphere> spheres) {
+    return false;
+}
+
+void shootRays(unsigned char* pixels, int resX, int resY, const glm::vec3 &bgColor, const glm::vec3 &ambientIntensity, vector<Light> lights, vector<Sphere> spheres) {
+    //camera parameters
+    float NEAR = inputs.near;
+    float LEFT = inputs.left;
+    float RIGHT = inputs.right;
+    float BOTTOM = inputs.bottom;
+    float TOP = inputs.top;
+    //loop through pixels
+    for (int y = 0; y < resY; ++y) {
+        for (int x = 0; x < resX; ++x) {
+            float u = LEFT + (RIGHT - LEFT) * ((x) / float(resX));
+            float v = BOTTOM + (NEAR - BOTTOM) * ((y)  / float(resY));
+
+            glm::vec3 rayOrigin(0.0f, 0.0f, 0.0f);
+            glm::vec3 rayDirection(u, v, -NEAR);
+            rayDirection = glm::normalize(rayDirection);
+
+            if(intersect(rayOrigin, rayDirection, spheres)) {
+
+            }
+            //set pixel to background color
+            else {
+                pixels[(y * resX + x) * 3 + 0] = (unsigned char)(bgColor[0] * 255.0f);
+                pixels[(y * resX + x) * 3 + 1] = (unsigned char)(bgColor[1] * 255.0f);
+                pixels[(y * resX + x) * 3 + 2] = (unsigned char)(bgColor[2] * 255.0f);
+            }
+        }
+    }
+
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -237,6 +273,11 @@ int main(int argc, char* argv[])
 
     parse(filename);
 
+    unsigned char* pixels = new unsigned char[inputs.resX * inputs.resY * 3];
+
+    shootRays(pixels, inputs.resX, inputs.resY, inputs.bkg, inputs.ambience, inputs.lights, inputs.spheres);
+    char filename[] = "test_output.ppm";
+    save_imageP3(inputs.resX, inputs.resY, filename, pixels);
  
 
  
