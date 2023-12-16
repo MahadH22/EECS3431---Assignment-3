@@ -153,23 +153,23 @@ void parse(char* filename)
             
             sphere.position[0] = stof(broken[i + 2]);
             sphere.position[1] = stof(broken[i + 3]);
-            sphere.position[2] = stof(broken[i + 3]);
+            sphere.position[2] = stof(broken[i + 4]);
             sphere.position[3] = 0;
 
-            sphere.scale.x = stof(broken[i + 4]);
-            sphere.scale.y = stof(broken[i + 5]);
-            sphere.scale.z = stof(broken[i + 6]);
+            sphere.scale.x = stof(broken[i + 5]);
+            sphere.scale.y = stof(broken[i + 6]);
+            sphere.scale.z = stof(broken[i + 7]);
 
-            sphere.color.r = stof(broken[i + 7]);
-            sphere.color.g = stof(broken[i + 8]);
-            sphere.color.b = stof(broken[i + 9]);
+            sphere.color.r = stof(broken[i + 8]);
+            sphere.color.g = stof(broken[i + 9]);
+            sphere.color.b = stof(broken[i + 10]);
 
-            sphere.kA = stof(broken[i + 10]);
-            sphere.kD = stof(broken[i + 11]);
-            sphere.kS = stof(broken[i + 12]);
-            sphere.kR = stof(broken[i + 13]);
+            sphere.kA = stof(broken[i + 11]);
+            sphere.kD = stof(broken[i + 12]);
+            sphere.kS = stof(broken[i + 13]);
+            sphere.kR = stof(broken[i + 14]);
 
-            sphere.n = stof(broken[i + 14]);
+            sphere.n = stof(broken[i + 15]);
             inputs.spheres.push_back(sphere);
 
 
@@ -368,6 +368,7 @@ void startRayTrace(unsigned char* pixels, int resX, int resY, const glm::vec3 &b
 
 }
 
+ 
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -387,11 +388,12 @@ int main(int argc, char* argv[])
     unsigned char* pixels = new unsigned char[inputs.resX * inputs.resY * 3];
     calculateTransformationMatrices(inputs.spheres);
     startRayTrace(pixels, inputs.resX, inputs.resY, inputs.bkg, inputs.ambience, inputs.lights, inputs.spheres);
-    char filename[] = "output.ppm";
-    save_imageP6(inputs.resX, inputs.resY, filename, pixels);
+    char file[] = "output.ppm";
+    save_imageP6(inputs.resX, inputs.resY, file, pixels);
  
     delete[] pixels;
- 
+
+
     return 0;
      
      
