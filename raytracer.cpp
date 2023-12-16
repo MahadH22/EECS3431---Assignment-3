@@ -223,6 +223,20 @@ void parse(char* filename)
     
 }
 
+void calculateTransformationMatrices(vector<Sphere>& spheres) {
+    //Identity matrix
+    const glm::mat4 identity = glm::mat4(1.f);
+
+    //Loop through all the spheres
+    for (Sphere& sphere : spheres) {
+        // Create the transformation matrix 
+        //Formula M = Translation * Scale * Rotation. Assuming no rotation here though.
+        sphere.transMatrix = glm::translate(identity, glm::vec3(sphere.position)) * glm::scale(identity, glm::vec3(sphere.scale));
+        // Inverse of the transformation matrix, just using glm library
+        sphere.invMatrix = glm::inverse(sphere.transMatrix);
+    }
+}
+
 float intersect(glm::vec4 rayOrigin, glm::vec3 rayDirection, const Sphere &sphere) {
     //t is negative if there is no intersection
     float t = -1.0f;
@@ -230,11 +244,11 @@ float intersect(glm::vec4 rayOrigin, glm::vec3 rayDirection, const Sphere &spher
     glm::vec4 rayOriginSphere = sphere.invMatrix * rayOrigin;
     glm::vec4 rayDirectionSphere = sphere.invMatrix * glm::vec4(rayDirection, 0.0f);
 
-    //Calcualte A (ray direction * ray direction) from lecture notes
+    //Calcualte A (ray direction * ray direction) 
     float A = glm::dot(glm::vec3(rayDirectionSphere), glm::vec3(rayDirectionSphere));
-    //Calculate B (ray origin * ray direction) from lecture notes
+    //Calculate B (ray origin * ray direction) 
     float B = 2.0f * glm::dot(glm::vec3(rayOriginSphere), glm::vec3(rayDirectionSphere));
-    //Calculate C (ray origin * ray origin) from lecture notes
+    //Calculate C (ray origin * ray origin)
     float C = glm::dot(glm::vec3(rayOriginSphere), glm::vec3(rayOriginSphere)) - 1.0f;  // Sphere radius is 1 in local space
     //Calculate Discriminant: Formula used is b^2 - 4ac
     float discriminant = (B * B) - (4 * A * C);
@@ -252,49 +266,41 @@ float intersect(glm::vec4 rayOrigin, glm::vec3 rayDirection, const Sphere &spher
 
     return t;
 }
-void calculateTransformationMatrices(vector<Sphere>& spheres) {
-    //Identity matrix
-    const glm::mat4 identity = glm::mat4(1.f);
-
-    //Loop through all the spheres
-    for (Sphere& sphere : spheres) {
-        // Create the transformation matrix 
-        //Formula M = Translation * Scale * Rotation. Assuming no rotation here.
-        sphere.transMatrix = glm::translate(identity, glm::vec3(sphere.position)) * glm::scale(identity, glm::vec3(sphere.scale));
-        // Inverse of the transformation matrix, just using glm library
-        sphere.invMatrix = glm::inverse(sphere.transMatrix);
-    }
-}
 
 glm::vec3 phongColorCalculation(glm::vec4 &intersectionPoint, const Sphere &sphere, std::vector<Light> &lights, const glm::vec3 &ambientIntensity) {
-    // Calculate ambient color
+    // Ambient compenent
     glm::vec3 ambientColor = sphere.color * sphere.kA * ambientIntensity;
+
     //Add the ambient color
     glm::vec3 color = ambientColor;
 
     //Normal vector at the intersection point
-    glm::vec3 normal = intersectionPoint - sphere.position;
+    glm::vec3 N = intersectionPoint - sphere.position;
     //Scale the normal vector according to the sphere's scale
-    normal = normal / (sphere.scale * sphere.scale);
+    N = N / (sphere.scale * sphere.scale);
     //Normalize the vector
-    normal = glm::normalize(normal);
+    N = glm::normalize(N);
 
-    //Vector starting from intersection point looking back at the camera, which the camera is always at (0,0,0) so just add a negative to intersectionPoint vector.
-    glm::vec3 viewDir = -glm::normalize(intersectionPoint);
+    //Vector starting from intersection point looking back at the camera, so just add a negative to intersectionPoint vector.
+    glm::vec3 V = -glm::normalize(intersectionPoint);
 
 
     for (const Light& light : lights) {
         //Normalized vector starting from the intersection point to the light source
-        glm::vec3 lightDir = glm::normalize(light.position - intersectionPoint);
+        glm::vec3 L = glm::normalize(light.position - intersectionPoint);
+
+        //Direction of the reflected light
+        //glm::reflect applies the formula I - 2.0 * dot(N, I) * N.
+        glm::vec3 R = glm::reflect(-L, N);
+        R = glm::normalize(R);
 
         // Diffuse component
-        float diff = std::max(glm::dot(normal, lightDir), 0.0f);
-        glm::vec3 diffuseColor = sphere.color * sphere.kD * diff * light.intensity;
+        float diffDot = glm::dot(N, L);
+        glm::vec3 diffuseColor = sphere.color * sphere.kD * diffDot * light.intensity;
 
         // Specular component
-        glm::vec3 reflectDir = glm::reflect(-lightDir, normal);
-        float spec = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), sphere.n);
-        glm::vec3 specularColor = sphere.kS * spec * light.intensity;
+        float specDot = pow(std::max(glm::dot(V, R), 0.0f), sphere.n);
+        glm::vec3 specularColor = sphere.kS * specDot * light.intensity;
 
         //Add all the colors together
         color += diffuseColor + specularColor;
@@ -325,22 +331,23 @@ void startRayTrace(unsigned char* pixels, int resX, int resY, const glm::vec3 &b
             //the camera is assumed to be at 0,0,0 at all times, so ray origin will always be 0,0,0
             glm::vec4 rayOrigin(0.0f, 0.0f, 0.0f, 1.0f);
             
-            //Normalized ray direction vector toward the near plane 
+            //Ray direction vector toward the near plane (into the pixel)
             glm::vec3 rayDirection(u, v, -NEAR);
+            //Normalize
             rayDirection = glm::normalize(rayDirection);
 
-            //The closest t value of the closest point of intersection from the ray origin to any object
+            //The closest t value of the closest point of intersection from the ray origin to an object
             //set to -1.0 if there is no intersection
             float closest_t = -1.0f;
-            //Pointer to the closest sphere that has intersection point 
+            //Pointer to the closest sphere that has the intersection point 
             Sphere* closestSphere = nullptr;
             
             //Loop through all spheres and calculate intersection point t. 
             for (auto& sphere : spheres) {
                 //calculate intersection point t.
                 float t = intersect(rayOrigin, rayDirection, sphere);
-                //If the t is smaller that the current closest_t, use that t to calculate color.
-                //If t 
+                //If a t has been calculated (which means an intersection exists), but closest_t is still negative, update closest_t to that t.
+                //If the t is smaller than the current closest_t, update closest_t to that t.
                 if(t >= 0.0f && (closest_t < 0.0f || t < closest_t)) {
                     closest_t = t;
                     closestSphere = &sphere;
@@ -371,6 +378,7 @@ void startRayTrace(unsigned char* pixels, int resX, int resY, const glm::vec3 &b
  
 int main(int argc, char* argv[])
 {
+    //parse the file
     if (argc < 2)
 
     {
@@ -385,10 +393,20 @@ int main(int argc, char* argv[])
 
     parse(filename);
 
+    //initialize pixel array
     unsigned char* pixels = new unsigned char[inputs.resX * inputs.resY * 3];
+
+    //calcualte the transformation matrices of the spheres beforehand
     calculateTransformationMatrices(inputs.spheres);
+    
+    //start the ray trace
     startRayTrace(pixels, inputs.resX, inputs.resY, inputs.bkg, inputs.ambience, inputs.lights, inputs.spheres);
-    char file[] = "output.ppm";
+
+    //converting the filename string to char array to work with the given ppm exporter
+    char file[inputs.output.length() + 1]; 
+    strcpy(file, inputs.output.c_str());
+
+    //change p6 or p3 generation here
     save_imageP6(inputs.resX, inputs.resY, file, pixels);
  
     delete[] pixels;
